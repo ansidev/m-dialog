@@ -2,7 +2,7 @@ import Vue from 'vue'
 import PopupTemplate from './popup-template'
 const instances = []
 let count = 1
-let Popup = null
+let mask = null
 const zIndexStack = []
 
 const Mask = Vue.extend(PopupTemplate)
@@ -13,7 +13,7 @@ export default {
       if (val) {
         this.mountTo()
         this.$emit('open')
-        Popup.show = true
+        mask.show = true
       } else {
         this.$emit('close', this.closeType)
         this.close(true)
@@ -24,8 +24,29 @@ export default {
   },
   methods: {
     mountTo () {
-      if (Popup && this.appendToBody) {
-        Popup.$el.appendChild(this.$el)
+      if (!mask && this.show) {
+        mask = new Mask({
+          el: document.createElement('div')
+        })
+        mask.escKeyDown = function () {
+          const current = zIndexStack[zIndexStack.length - 1]
+          if (current) {
+            current.closeType = 'esc'
+            if (current.closeOnPressEscape) {
+              if (typeof current.beforeClose === 'function') {
+                current.beforeClose(current.closeType, current.close)
+              } else {
+                current.close(false)
+              }
+            }
+          }
+        }
+
+        document.body.appendChild(mask.$el)
+      }
+
+      if (mask && this.appendToBody) {
+        mask.$el.appendChild(this.$el)
       }
     },
     afterClose () {
@@ -34,7 +55,7 @@ export default {
           return false
         }
       }
-      Popup.show = false
+      mask.show = false
     },
     setStack () {
       if (this.show) {
@@ -55,37 +76,16 @@ export default {
     }
   },
   created () {
-    if (!Popup) {
-      Popup = new Mask({
-        el: document.createElement('div')
-      })
-      Popup.escKeyDown = function () {
-        const current = zIndexStack[zIndexStack.length - 1]
-        if (current) {
-          current.closeType = 'esc'
-          if (current.closeOnPressEscape) {
-            if (typeof current.beforeClose === 'function') {
-              current.beforeClose(current.closeType, current.close)
-            } else {
-              current.close(false)
-            }
-          }
-        }
-      }
-
-      document.body.appendChild(Popup.$el)
-    }
-
     this.id = ++count
     instances.push(this)
-
-    if (this.show) {
-      Popup.show = true
-    }
   },
   mounted () {
     this.mountTo()
     this.setStack()
+
+    if (mask && this.show) {
+      mask.show = true
+    }
   },
   destroyed () {
     for (let i in instances) {
@@ -95,7 +95,7 @@ export default {
       }
     }
     if (instances.length === 0) {
-      Popup && Popup.$destroy()
+      mask && mask.$destroy()
     }
   }
 }
