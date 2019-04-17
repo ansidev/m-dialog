@@ -96,10 +96,14 @@ export default {
       if (this.show) {
         this.$emit('update:show', false)
       }
+      // 处理遮罩
       isClose && this.afterClose()
     }
   },
   destroyed () {
+    // 销毁时关闭处理
+    this.close(true)
+
     if (this.appendToBody && this.$el && this.$el.parentNode) {
       this.$el.parentNode.removeChild(this.$el)
     }
